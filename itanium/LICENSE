@@ -7,9 +7,9 @@ It contains code from the GNU Compiler Collection.
 
 If it would be legal, to also distribute it under 
 th GCC RUNTIME LIBRARY EXCEPTION
-Version 3.1, 31 March 2009 it also applies.
+Version 3.1, 31 March 2009 this also applies.
 
-=============================================================================
+================================================================================
 
                     GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
@@ -686,7 +686,7 @@ the library.  If this is what you want to do, use the GNU Lesser General
 Public License instead of this License.  But first, please read
 <https://www.gnu.org/licenses/why-not-lgpl.html>.
 
-=============================================================================
+================================================================================
 
 GCC RUNTIME LIBRARY EXCEPTION
 
