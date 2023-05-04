@@ -12,7 +12,20 @@ set (CMAKE_CXX_EXTENSIONS OFF)
 add_library(stacktrace INTERFACE)
 add_library(fbbe::stacktrace ALIAS stacktrace)
 
-if(OFF AND ( MSVC OR WIN32)) # MSVC or clang-cl or mingw/cygwin
+
+if (NOT DEFINED FBBE_USE_IMPL)
+  if(MSVC) # MSVC or clang-cl or mingw/cygwin
+    set(FBBE_USE_IMPL "msvc")
+  elseif(WIN32)
+    find_package(Backtrace REQUIRED)
+    set(FBBE_USE_IMPL "gnu")  
+  elseif(GNU OR UNIX OR APPLE) 
+    set(FBBE_USE_IMPL "gnu")
+  endif()
+  set(FBBE_USE_IMPL ${FBBE_USE_IMPL} CACHE STRING "The stacktrace implementation to use [msvc, gnu]")   
+endif()
+
+if(${FBBE_USE_IMPL} STREQUAL "msvc")
   add_library(stacktrace_msvc_impl STATIC)
   target_include_directories(stacktrace_msvc_impl PUBLIC msvc/include)
   target_include_directories(stacktrace INTERFACE msvc/include)
@@ -21,7 +34,7 @@ if(OFF AND ( MSVC OR WIN32)) # MSVC or clang-cl or mingw/cygwin
   CHECK_INCLUDE_FILE(<stacktrace> has_stacktrace)
   # generator expr to exclude the msvc implementation when the msvc runtime has support for stacktraces
   target_link_libraries(stacktrace INTERFACE <$OR<$<NOT:$<BOOL:${has_stacktrace}>>:<$<NOT:$<BOOL:${MSVC}>>:stacktrace_msvc_impl>)
-elseif(GNU OR UNIX OR APPLE OR CYGWIN OR MINGW OR MSYS)
+elseif(${FBBE_USE_IMPL} STREQUAL "gnu")
   #add_library(stacktrace_gnu_impl STATIC)
   #target_include_directories(stacktrace_gnu_impl PUBLIC gcc/include)
   target_include_directories(stacktrace INTERFACE gcc/include)
@@ -31,10 +44,11 @@ elseif(GNU OR UNIX OR APPLE OR CYGWIN OR MINGW OR MSYS)
   #target_sources(stacktrace_msvc_impl PRIVATE gcc/src/gcc_stacktrace.cpp)
   #target_link_libraries(stacktrace INTERFACE stacktrace_gnu_impl)
   message (STATUS "GNU")
+else()
+  message (FATAL_ERROR "Unknown stacktrace implementation: ${FBBE_USE_IMPL}")
 endif()
 
 # Compilation tests
-
 add_executable(test_stacktrace_17 test/main.cpp)
 target_compile_features(test_stacktrace_17 PRIVATE cxx_std_17)
 target_link_libraries(test_stacktrace_17 PRIVATE fbbe::stacktrace)
