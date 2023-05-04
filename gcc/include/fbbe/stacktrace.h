@@ -67,13 +67,16 @@ using stacktrace = std::pmr::stacktrace;
 #include <sstream>
 #include <string>
 #include <memory_resource>
-		
+
+//GCC 12 must not do this
+#if __GNUC__ < 12		
 #define __glibcxx_backtrace_state backtrace_state
 #define __glibcxx_backtrace_simple_data backtrace_simple_data
 #define __glibcxx_backtrace_create_state backtrace_create_state
 #define __glibcxx_backtrace_simple backtrace_simple
 #define __glibcxx_backtrace_pcinfo backtrace_pcinfo
 #define __glibcxx_backtrace_syminfo backtrace_syminfo
+#endif
 
 struct __glibcxx_backtrace_state;
 struct __glibcxx_backtrace_simple_data;
