@@ -1,7 +1,7 @@
 // hello world
 #include <iostream>
 
-#include "../win/include/fbbe/stacktrace.h"
+#include "fbbe/stacktrace.h"
 
 auto main(int argc, char* argv[]) -> int {
     auto current = fbbe::stacktrace::current();

@@ -1,6 +1,5 @@
-// Modified version of <stacktrace> header from MSVC STL
-// With LICENSE from
-// stacktrace standard header
+// Modified version of <stacktrace> header from MSVC STL:
+
 // Copyright (c) Microsoft Corporation.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
@@ -10,8 +9,6 @@
 
 #define _FBBE_BEGIN namespace fbbe {
 #define _FBBE_END }   // namespace fbbe
-
-
 
 #if __has_include(<stacktrace>)
 #  include <stacktrace>
