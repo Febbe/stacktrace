@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 
-project(fbbe__stacktrace LANGUAGES CXX)
+project(fbbe__stacktrace LANGUAGES CXX C)
 
 # All compilers support this now
 # Also, when it's not allowed to use c++17 then a change to c++20 or c++23 will not happen as soon as all compiler and platforms support it.
@@ -12,15 +12,12 @@ set (CMAKE_CXX_EXTENSIONS OFF)
 add_library(stacktrace INTERFACE)
 add_library(fbbe::stacktrace ALIAS stacktrace)
 
-
 if (NOT DEFINED FBBE_USE_IMPL)
   if(MSVC) # MSVC or clang-cl or mingw/cygwin
     set(FBBE_USE_IMPL "msvc")
-  elseif(WIN32)
+  else() # gcc or clang both support backtrace
     find_package(Backtrace REQUIRED)
-    set(FBBE_USE_IMPL "gnu")  
-  elseif(GNU OR UNIX OR APPLE) 
-    set(FBBE_USE_IMPL "gnu")
+    set(FBBE_USE_IMPL "itanium")
   endif()
   set(FBBE_USE_IMPL ${FBBE_USE_IMPL} CACHE STRING "The stacktrace implementation to use [msvc, gnu]")   
 endif()
@@ -30,24 +27,34 @@ if(${FBBE_USE_IMPL} STREQUAL "msvc")
   target_include_directories(stacktrace_msvc_impl PUBLIC msvc/include)
   target_include_directories(stacktrace INTERFACE msvc/include)
   target_sources(stacktrace_msvc_impl PRIVATE msvc/src/msvc_stacktrace.cpp)
+  
   include(CheckIncludeFile)
   CHECK_INCLUDE_FILE(<stacktrace> has_stacktrace)
   # generator expr to exclude the msvc implementation when the msvc runtime has support for stacktraces
-  target_link_libraries(stacktrace INTERFACE <$OR<$<NOT:$<BOOL:${has_stacktrace}>>:<$<NOT:$<BOOL:${MSVC}>>:stacktrace_msvc_impl>)
-elseif(${FBBE_USE_IMPL} STREQUAL "gnu")
-  #add_library(stacktrace_gnu_impl STATIC)
-  #target_include_directories(stacktrace_gnu_impl PUBLIC gcc/include)
-  target_include_directories(stacktrace INTERFACE gcc/include)
+  if (NOT ${has_stacktrace})
+    target_link_libraries(stacktrace INTERFACE $<$<VERSION_LESS:$<CXX_COMPILER_VERSION>,23>:stacktrace_msvc_impl>)
+  endif()
+elseif(${FBBE_USE_IMPL} STREQUAL "itanium") # gcc or clang support the itanium C++ unwind API
+  target_include_directories(stacktrace INTERFACE itanium/include)
   find_package(Backtrace REQUIRED)
-  target_include_directories(stacktrace INTERFACE ${Backtrace_INCLUDE_DIRS})
-  target_link_libraries(stacktrace INTERFACE ${Backtrace_LIBRARIES} ${Backtrace_LIBRARY} ${CMAKE_DL_LIBS})
-  message(STATUS "Backtrace_INCLUDE_DIRS: ${Backtrace_INCLUDE_DIRS}")
-  message(STATUS "Backtrace_LIBRARIES: ${Backtrace_LIBRARIES}")
-  message(STATUS "Backtrace_LIBRARY: ${Backtrace_LIBRARY}")
-  message(STATUS "CMAKE_DL_LIBS: ${CMAKE_DL_LIBS}")
-  #target_sources(stacktrace_msvc_impl PRIVATE gcc/src/gcc_stacktrace.cpp)
-  #target_link_libraries(stacktrace INTERFACE stacktrace_gnu_impl)
-  message (STATUS "GNU")
+  
+  # use generator expression hopefully it evalutes when the target is used and not when it is created
+  # generator expression only for CMAKE_CXX_STANDARD < 23
+  target_include_directories(stacktrace INTERFACE $<$<VERSION_LESS:$<CXX_COMPILER_VERSION>,23>:${Backtrace_INCLUDE_DIRS}>)
+
+  # gnu libc seems to hide the original symbol names of backtrace behind own symbol names
+  # only backtrace(3) is visible to the outside
+  # therefore we need to link against the backtrace library before c++23
+  # libbacktrace (https://github.com/ianlancetaylor/libbacktrace) is part of libc but can be used standalone
+
+  if("${Backtrace_HEADER}" STREQUAL "execinfo.h" OR "${Backtrace_LIBRARIES}" STREQUAL "" OR "${Backtrace_LIBRARY}" STREQUAL "")
+    set(Backtrace_LIBRARY "backtrace")
+    list(APPEND Backtrace_LIBRARIES "backtrace")
+  endif()
+
+  target_link_libraries(stacktrace INTERFACE $<$<VERSION_LESS:$<CXX_COMPILER_VERSION>,23>:${Backtrace_LIBRARIES}>)
+  target_compile_options(stacktrace INTERFACE -g)
+  target_link_options(stacktrace INTERFACE -rdynamic)
 else()
   message (FATAL_ERROR "Unknown stacktrace implementation: ${FBBE_USE_IMPL}")
 endif()

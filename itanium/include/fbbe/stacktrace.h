@@ -1,7 +1,8 @@
 // Copyright Fabian Keßler 2022 - 2023.
 
 // Modified version of stacktrace from GCC
-// https://raw.githubusercontent.com/gcc-mirror/gcc/7b206ae7f17455b69349767ec48b074db260a2a7/libstdc%2B%2B-v3/include/std/stacktrace :
+// https://raw.githubusercontent.com/gcc-mirror/gcc/7b206ae7f17455b69349767ec48b074db260a2a7/libstdc%2B%2B-v3/include/std/stacktrace
+// :
 
 // <stacktrace> -*- C++ -*-
 
@@ -30,18 +31,17 @@
 #ifndef _FBBE_GNU_STACKTRACE
 #define _FBBE_GNU_STACKTRACE 1
 
-
-#if not defined (_FBBE_GNU_STACKTRACE)
-# if __has_include(<stacktrace>)
-# include <stacktrace>
-#  if defined (__cpp_lib_stacktrace) && __cpp_lib_stacktrace >= 201907L
-#    define _FBBE_GNU_STACKTRACE 0
-#  else
-#    define _FBBE_GNU_STACKTRACE 1
-#  endif
-# endif
+#if not defined(_FBBE_GNU_STACKTRACE)
+#if __has_include(<stacktrace>)
+#include <stacktrace>
+#if defined(__cpp_lib_stacktrace) && __cpp_lib_stacktrace >= 201907L
+#define _FBBE_GNU_STACKTRACE 0
 #else
-# define _FBBE_GNU_STACKTRACE 1
+#define _FBBE_GNU_STACKTRACE 1
+#endif
+#endif
+#else
+#define _FBBE_GNU_STACKTRACE 1
 #endif
 
 #if _FBBE_GNU_STACKTRACE == 0
@@ -54,52 +54,53 @@ using stacktrace = ::std::stacktrace;
 namespace pmr {
 using stacktrace = std::pmr::stacktrace;
 }
-}
+} // namespace fbbe
 
 #endif
 
 #pragma GCC system_header
 
+#include <backtrace.h>
 #include <compare>
 #include <limits>
 #include <memory>
+#include <memory_resource>
 #include <new>
 #include <sstream>
 #include <string>
-#include <memory_resource>
 
-//GCC 12 must not do this
-#if __GNUC__ < 12		
 #define __glibcxx_backtrace_state backtrace_state
 #define __glibcxx_backtrace_simple_data backtrace_simple_data
 #define __glibcxx_backtrace_create_state backtrace_create_state
 #define __glibcxx_backtrace_simple backtrace_simple
 #define __glibcxx_backtrace_pcinfo backtrace_pcinfo
 #define __glibcxx_backtrace_syminfo backtrace_syminfo
-#endif
 
-struct __glibcxx_backtrace_state;
-struct __glibcxx_backtrace_simple_data;
+// struct __glibcxx_backtrace_state;
+// struct __glibcxx_backtrace_simple_data;
 
-extern "C" {
-__glibcxx_backtrace_state *
-__glibcxx_backtrace_create_state(const char *, int,
-                                 void (*)(void *, const char *, int), void *);
+// extern "C" {
+// __glibcxx_backtrace_state *
+// __glibcxx_backtrace_create_state(const char *, int,
+//                                  void (*)(void *, const char *, int), void
+//                                  *);
 
-int __glibcxx_backtrace_simple(__glibcxx_backtrace_state *, int,
-                               int (*)(void *, __UINTPTR_TYPE__),
-                               void (*)(void *, const char *, int), void *);
-int __glibcxx_backtrace_pcinfo(__glibcxx_backtrace_state *, __UINTPTR_TYPE__,
-                               int (*)(void *, __UINTPTR_TYPE__, const char *,
-                                       int, const char *),
-                               void (*)(void *, const char *, int), void *);
+// int __glibcxx_backtrace_simple(__glibcxx_backtrace_state *, int,
+//                                int (*)(void *, __UINTPTR_TYPE__),
+//                                void (*)(void *, const char *, int), void *);
+// int __glibcxx_backtrace_pcinfo(__glibcxx_backtrace_state *, __UINTPTR_TYPE__,
+//                                int (*)(void *, __UINTPTR_TYPE__, const char
+//                                *,
+//                                        int, const char *),
+//                                void (*)(void *, const char *, int), void *);
 
-int __glibcxx_backtrace_syminfo(__glibcxx_backtrace_state *,
-                                __UINTPTR_TYPE__ addr,
-                                void (*)(void *, __UINTPTR_TYPE__, const char *,
-                                         __UINTPTR_TYPE__, __UINTPTR_TYPE__),
-                                void (*)(void *, const char *, int), void *);
-}
+// int __glibcxx_backtrace_syminfo(__glibcxx_backtrace_state *,
+//                                 __UINTPTR_TYPE__ addr,
+//                                 void (*)(void *, __UINTPTR_TYPE__, const char
+//                                 *,
+//                                          __UINTPTR_TYPE__, __UINTPTR_TYPE__),
+//                                 void (*)(void *, const char *, int), void *);
+// }
 
 namespace __cxxabiv1 {
 extern "C" char *__cxa_demangle(const char *__mangled_name,
@@ -704,22 +705,23 @@ private:
       _M_size = __n;
     }
 
-#if not (defined (__cpp_lib_to_address) && __cpp_lib_to_address >= 201711L)
-    
+#if not(defined(__cpp_lib_to_address) && __cpp_lib_to_address >= 201711L)
+
     template <class T> constexpr T *to_address(T *p) noexcept {
       static_assert(!std::is_function_v<T>);
       return p;
     }
 
     template <class T> constexpr auto to_address(const T &p) noexcept {
-        return to_address(p.operator->());
+      return to_address(p.operator->());
     }
 
 #else
-template <class T> 
-auto to_address(T&& arg) -> decltype(std::to_address(std::forward<T>(arg))) {
-  return std::to_address(std::forward<T>(arg));
-}
+    template <class T>
+    auto to_address(T &&arg)
+        -> decltype(std::to_address(std::forward<T>(arg))) {
+      return std::to_address(std::forward<T>(arg));
+    }
 
 #endif
 
@@ -825,8 +827,10 @@ template <> struct std::hash<fbbe::stacktrace_entry> {
   }
 };
 
-template <typename _Allocator> struct std::hash<fbbe::basic_stacktrace<_Allocator>> {
-  size_t operator()(const fbbe::basic_stacktrace<_Allocator> &__st) const noexcept {
+template <typename _Allocator>
+struct std::hash<fbbe::basic_stacktrace<_Allocator>> {
+  size_t
+  operator()(const fbbe::basic_stacktrace<_Allocator> &__st) const noexcept {
     constexpr static auto hcomb = [](size_t seed, size_t value) {
       return seed ^= value + 0x9e3779b9 + (seed << 6) + (seed >> 2);
     };
