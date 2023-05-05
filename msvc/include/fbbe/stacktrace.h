@@ -35,6 +35,15 @@ _FBBE_END
 
 #else
 
+// Abi renames
+#define __std_stacktrace fbbe_std_stacktrace
+#define __std_stacktrace_capture fbbe_std_stacktrace_capture
+#define __std_stacktrace_description fbbe_std_stacktrace_description
+#define __std_stacktrace_source_file fbbe_std_stacktrace_source_file
+#define __std_stacktrace_source_line fbbe_std_stacktrace_source_line
+#define __std_stacktrace_address_to_string fbbe_std_stacktrace_address_to_string
+#define __std_stacktrace_to_string fbbe_std_stacktrace_to_string
+
 #define _FBBE_EXTERN_C     extern "C" {
 #define _FBBE_END_EXTERN_C }
 
@@ -504,6 +513,13 @@ struct std::hash<fbbe::basic_stacktrace<_Alloc>> {
 // _STL_RESTORE_CLANG_WARNINGS
 // #pragma warning(pop)
 // #pragma pack(pop)
+
+#undef __std_stacktrace_capture
+#undef __std_stacktrace_description
+#undef __std_stacktrace_source_file
+#undef __std_stacktrace_source_line
+#undef __std_stacktrace_address_to_string
+#undef __std_stacktrace_to_string
 
 #endif // _FBBE_USES_STD 0
 #endif // _FBBE_STACKTRACE_

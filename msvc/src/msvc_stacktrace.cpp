@@ -1,7 +1,15 @@
 // The following source code comes from https://raw.githubusercontent.com/microsoft/STL/091cad2eaaa5bc25873eb7261cae57ab123592f3/stl/src/stacktrace.cpp  
 // It is only modified to be compilable with c++17
 // (constexpr -> constexpr static)
-#if 1 || defined(_MSC_VER) && !__has_include(<stacktrace>) // when linked to a cpp23 supporting MSVC STL those symbols exist 
+#if defined(_MSC_VER) 
+
+// Abi renames
+#define __std_stacktrace_capture fbbe_std_stacktrace_capture
+#define __std_stacktrace_description fbbe_std_stacktrace_description
+#define __std_stacktrace_source_file fbbe_std_stacktrace_source_file
+#define __std_stacktrace_source_line fbbe_std_stacktrace_source_line
+#define __std_stacktrace_address_to_string fbbe_std_stacktrace_address_to_string
+#define __std_stacktrace_to_string fbbe_std_stacktrace_to_string
 
 // Copyright (c) Microsoft Corporation.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -336,4 +344,12 @@ void __stdcall __std_stacktrace_to_string(const void* const* const _Addresses, c
     }
 }
 _END_EXTERN_C
+
+#undef __std_stacktrace_capture
+#undef __std_stacktrace_description
+#undef __std_stacktrace_source_file
+#undef __std_stacktrace_source_line
+#undef __std_stacktrace_address_to_string
+#undef __std_stacktrace_to_string
+
 #endif

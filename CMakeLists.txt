@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.0)
 
+set(MSVC_VERSION 1929)
+
 project(fbbe__stacktrace LANGUAGES CXX C)
 
 # All compilers support this now
@@ -23,17 +25,15 @@ if (NOT DEFINED FBBE_USE_IMPL)
 endif()
 
 if(${FBBE_USE_IMPL} STREQUAL "msvc")
-  add_library(stacktrace_msvc_impl STATIC)
+  add_library(stacktrace_msvc_impl STATIC msvc/src/msvc_stacktrace.cpp)
   target_include_directories(stacktrace_msvc_impl PUBLIC msvc/include)
   target_include_directories(stacktrace INTERFACE msvc/include)
-  target_sources(stacktrace_msvc_impl PRIVATE msvc/src/msvc_stacktrace.cpp)
   
   include(CheckIncludeFile)
   CHECK_INCLUDE_FILE(<stacktrace> has_stacktrace)
+  message(STATUS "has <stacktrace> include: ${has_stacktrace}")
   # generator expr to exclude the msvc implementation when the msvc runtime has support for stacktraces
-  if (NOT ${has_stacktrace})
-    target_link_libraries(stacktrace INTERFACE $<$<VERSION_LESS:$<CXX_COMPILER_VERSION>,23>:stacktrace_msvc_impl>)
-  endif()
+  target_link_libraries(stacktrace INTERFACE $<$<VERSION_LESS:$<CXX_COMPILER_VERSION>,23>:stacktrace_msvc_impl>)
 elseif(${FBBE_USE_IMPL} STREQUAL "itanium") # gcc or clang support the itanium C++ unwind API
   target_include_directories(stacktrace INTERFACE itanium/include)
   find_package(Backtrace REQUIRED)
