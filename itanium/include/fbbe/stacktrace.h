@@ -60,7 +60,7 @@ using stacktrace = std::pmr::stacktrace;
 
 #pragma GCC system_header
 
-#include <backtrace.h>
+#include <utility>
 #include <compare>
 #include <limits>
 #include <memory>
@@ -69,38 +69,36 @@ using stacktrace = std::pmr::stacktrace;
 #include <sstream>
 #include <string>
 
-#define __glibcxx_backtrace_state backtrace_state
-#define __glibcxx_backtrace_simple_data backtrace_simple_data
-#define __glibcxx_backtrace_create_state backtrace_create_state
-#define __glibcxx_backtrace_simple backtrace_simple
-#define __glibcxx_backtrace_pcinfo backtrace_pcinfo
-#define __glibcxx_backtrace_syminfo backtrace_syminfo
+#if __has_include(<backtrace.h>)
+#include <backtrace.h>
+#else
 
-// struct __glibcxx_backtrace_state;
-// struct __glibcxx_backtrace_simple_data;
+struct backtrace_state;
+struct backtrace_simple_data;
+extern "C" {
+backtrace_state *
+backtrace_create_state(const char *, int,
+                                 void (*)(void *, const char *, int), void
+                                 *);
+int backtrace_simple(backtrace_state *, int,
+                               int (*)(void *, __UINTPTR_TYPE__),
+                               void (*)(void *, const char *, int), void *);
+int backtrace_pcinfo(backtrace_state *, __UINTPTR_TYPE__,
+                               int (*)(void *, __UINTPTR_TYPE__, const char
+                               *,
+                                       int, const char *),
+                               void (*)(void *, const char *, int), void *);
+int backtrace_syminfo(backtrace_state *,
+                                __UINTPTR_TYPE__ addr,
+                                void (*)(void *, __UINTPTR_TYPE__, const char
+                                *,
+                                         __UINTPTR_TYPE__, __UINTPTR_TYPE__),
+                                void (*)(void *, const char *, int), void *);
+}
 
-// extern "C" {
-// __glibcxx_backtrace_state *
-// __glibcxx_backtrace_create_state(const char *, int,
-//                                  void (*)(void *, const char *, int), void
-//                                  *);
+#endif
 
-// int __glibcxx_backtrace_simple(__glibcxx_backtrace_state *, int,
-//                                int (*)(void *, __UINTPTR_TYPE__),
-//                                void (*)(void *, const char *, int), void *);
-// int __glibcxx_backtrace_pcinfo(__glibcxx_backtrace_state *, __UINTPTR_TYPE__,
-//                                int (*)(void *, __UINTPTR_TYPE__, const char
-//                                *,
-//                                        int, const char *),
-//                                void (*)(void *, const char *, int), void *);
 
-// int __glibcxx_backtrace_syminfo(__glibcxx_backtrace_state *,
-//                                 __UINTPTR_TYPE__ addr,
-//                                 void (*)(void *, __UINTPTR_TYPE__, const char
-//                                 *,
-//                                          __UINTPTR_TYPE__, __UINTPTR_TYPE__),
-//                                 void (*)(void *, const char *, int), void *);
-// }
 
 namespace __cxxabiv1 {
 extern "C" char *__cxa_demangle(const char *__mangled_name,
@@ -210,9 +208,9 @@ private:
 
   static void _S_err_handler(void *, const char *, int) {}
 
-  static __glibcxx_backtrace_state *_S_init() {
-    static __glibcxx_backtrace_state *__state =
-        __glibcxx_backtrace_create_state(nullptr, 1, _S_err_handler, nullptr);
+  static backtrace_state *_S_init() {
+    static backtrace_state *__state =
+        backtrace_create_state(nullptr, 1, _S_err_handler, nullptr);
     return __state;
   }
 
@@ -241,7 +239,7 @@ private:
       return __function != nullptr;
     };
     const auto __state = _S_init();
-    if (::__glibcxx_backtrace_pcinfo(__state, _M_pc, +__cb, _S_err_handler,
+    if (::backtrace_pcinfo(__state, _M_pc, +__cb, _S_err_handler,
                                      &__data))
       return true;
     if (__desc && __desc->empty()) {
@@ -250,12 +248,18 @@ private:
         if (__symname)
           *static_cast<_Data *>(__data)->_M_desc = _S_demangle(__symname);
       };
-      if (::__glibcxx_backtrace_syminfo(__state, _M_pc, +__cb2, _S_err_handler,
+      if (::backtrace_syminfo(__state, _M_pc, +__cb2, _S_err_handler,
                                         &__data))
         return true;
     }
     return false;
   }
+
+#if __has_builtin(__builtin_free)
+#define _FBBE_GNU_FREE __builtin_free
+#else
+#define _FBBE_GNU_FREE std::free
+#endif
 
   static std::string _S_demangle(const char *__name) {
     std::string __s;
@@ -266,7 +270,7 @@ private:
       __s = __str;
     else
       __s = __name;
-    __builtin_free(__str);
+    _FBBE_GNU_FREE(__str);
     return __s;
   }
 };
@@ -295,7 +299,7 @@ public:
     basic_stacktrace __ret(__alloc);
     if (auto __cb = __ret._M_prepare()) [[likely]] {
       auto __state = stacktrace_entry::_S_init();
-      if (__glibcxx_backtrace_simple(__state, 1, __cb,
+      if (backtrace_simple(__state, 1, __cb,
                                      stacktrace_entry::_S_err_handler,
                                      std::addressof(__ret)))
         __ret._M_clear();
@@ -311,7 +315,7 @@ public:
       return __ret;
     if (auto __cb = __ret._M_prepare()) [[likely]] {
       auto __state = stacktrace_entry::_S_init();
-      if (__glibcxx_backtrace_simple(__state, __skip + 1, __cb,
+      if (backtrace_simple(__state, __skip + 1, __cb,
                                      stacktrace_entry::_S_err_handler,
                                      std::addressof(__ret)))
         __ret._M_clear();
@@ -332,7 +336,7 @@ public:
       return __ret;
     if (auto __cb = __ret._M_prepare(__max_depth)) [[likely]] {
       auto __state = stacktrace_entry::_S_init();
-      int __err = __glibcxx_backtrace_simple(__state, __skip + 1, __cb,
+      int __err = backtrace_simple(__state, __skip + 1, __cb,
                                              stacktrace_entry::_S_err_handler,
                                              std::addressof(__ret));
       if (__err < 0)
