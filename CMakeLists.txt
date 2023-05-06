@@ -11,6 +11,8 @@ set (CMAKE_CXX_STANDARD 17)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 set (CMAKE_CXX_EXTENSIONS OFF)
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
+
 add_library(stacktrace INTERFACE)
 add_library(fbbe::stacktrace ALIAS stacktrace)
 
@@ -36,25 +38,14 @@ if(${FBBE_USE_IMPL} STREQUAL "msvc")
   target_link_libraries(stacktrace INTERFACE $<$<VERSION_LESS:$<CXX_COMPILER_VERSION>,23>:stacktrace_msvc_impl>)
 elseif(${FBBE_USE_IMPL} STREQUAL "itanium") # gcc or clang support the itanium C++ unwind API
   target_include_directories(stacktrace INTERFACE itanium/include)
-  find_package(Backtrace REQUIRED)
-  
+  find_package(Backtrace MODULE REQUIRED)
   # use generator expression hopefully it evalutes when the target is used and not when it is created
   # generator expression only for CMAKE_CXX_STANDARD < 23
-  target_include_directories(stacktrace INTERFACE $<$<VERSION_LESS:$<CXX_COMPILER_VERSION>,23>:${Backtrace_INCLUDE_DIRS}>)
-
-  # gnu libc seems to hide the original symbol names of backtrace behind own symbol names
-  # only backtrace(3) is visible to the outside
-  # therefore we need to link against the backtrace library before c++23
-  # libbacktrace (https://github.com/ianlancetaylor/libbacktrace) is part of libc but can be used standalone
-
-  if("${Backtrace_HEADER}" STREQUAL "execinfo.h" OR "${Backtrace_LIBRARIES}" STREQUAL "" OR "${Backtrace_LIBRARY}" STREQUAL "")
-    set(Backtrace_LIBRARY "backtrace")
-    list(APPEND Backtrace_LIBRARIES "backtrace")
+  target_link_libraries(stacktrace INTERFACE $<$<VERSION_LESS:$<CXX_COMPILER_VERSION>,23>:Backtrace::backtrace>)
+  # target_link_libraries(stacktrace INTERFACE $<$<VERSION_LESS:$<CXX_COMPILER_VERSION>,23>:${Backtrace_LIBRARIES}>)
+  if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    target_compile_options(stacktrace INTERFACE -fsized-deallocation)
   endif()
-
-  target_link_libraries(stacktrace INTERFACE $<$<VERSION_LESS:$<CXX_COMPILER_VERSION>,23>:${Backtrace_LIBRARIES}>)
-  target_compile_options(stacktrace INTERFACE -g)
-  target_link_options(stacktrace INTERFACE -rdynamic)
 else()
   message (FATAL_ERROR "Unknown stacktrace implementation: ${FBBE_USE_IMPL}")
 endif()
