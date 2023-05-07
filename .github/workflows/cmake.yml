@@ -15,6 +15,13 @@ jobs:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v3
+
+    - name: Update Apple Clang
+      run: | 
+        sudo rm -rf /Library/Developer/CommandLineTools
+        xcode-select --install
+        clang --version
+
     - name: Configure CMake
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 

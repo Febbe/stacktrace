@@ -43,6 +43,7 @@ elseif(${FBBE_USE_IMPL} STREQUAL "itanium") # gcc or clang support the itanium C
   # generator expression only for CMAKE_CXX_STANDARD < 23
   target_link_libraries(stacktrace INTERFACE $<$<VERSION_LESS:$<CXX_COMPILER_VERSION>,23>:Backtrace::backtrace>)
   # target_link_libraries(stacktrace INTERFACE $<$<VERSION_LESS:$<CXX_COMPILER_VERSION>,23>:${Backtrace_LIBRARIES}>)
+  message("CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}")
   if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     target_compile_options(stacktrace INTERFACE -fsized-deallocation)
   endif()
