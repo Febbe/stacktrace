@@ -60,7 +60,6 @@ using stacktrace = std::pmr::stacktrace;
 
 #pragma GCC system_header
 
-#include <compare>
 #include <limits>
 #include <memory>
 #include <new>
@@ -68,6 +67,9 @@ using stacktrace = std::pmr::stacktrace;
 #include <string>
 #include <utility>
 
+#if __has_include(<compare>)
+#include <compare>
+#endif
 
 #if __has_include(<backtrace.h>)
 #include <backtrace.h>
