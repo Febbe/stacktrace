@@ -1,15 +1,12 @@
 cmake_minimum_required(VERSION 3.0)
 
-set(MSVC_VERSION 1929)
-
 project(fbbe__stacktrace LANGUAGES CXX C)
 
-# All compilers support this now
-# Also, when it's not allowed to use c++17 then a change to c++20 or c++23 will not happen as soon as all compiler and platforms support it.
-# Therefore it might be better to just use another stacktrace library that supports c++14 and lower.
-set (CMAKE_CXX_STANDARD 17)
-set (CMAKE_CXX_STANDARD_REQUIRED ON)
-set (CMAKE_CXX_EXTENSIONS OFF)
+if (PROJECT_IS_TOP_LEVEL)
+  set (CMAKE_CXX_STANDARD 17)
+  set (CMAKE_CXX_STANDARD_REQUIRED ON)
+  set (CMAKE_CXX_EXTENSIONS OFF)
+endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
@@ -17,10 +14,10 @@ add_library(stacktrace INTERFACE)
 add_library(fbbe::stacktrace ALIAS stacktrace)
 
 if (NOT DEFINED FBBE_USE_IMPL)
-  if(MSVC) # MSVC or clang-cl or mingw/cygwin
+  if(MSVC) # MSVC or clang-cl using MSVC runtime/STL
     set(FBBE_USE_IMPL "msvc")
-  else() # gcc or clang both support backtrace
-    find_package(Backtrace REQUIRED)
+  else() # gcc or clang both support backtrace, which utilizes the itanium C++ unwind API
+    find_package(Backtrace MODULE REQUIRED)
     set(FBBE_USE_IMPL "itanium")
   endif()
   set(FBBE_USE_IMPL ${FBBE_USE_IMPL} CACHE STRING "The stacktrace implementation to use [msvc, gnu]")   
@@ -51,6 +48,8 @@ else()
   message (FATAL_ERROR "Unknown stacktrace implementation: ${FBBE_USE_IMPL}")
 endif()
 
+if (PROJECT_IS_TOP_LEVEL)
+
 # Compilation tests
 add_executable(test_stacktrace_17 test/main.cpp)
 target_compile_features(test_stacktrace_17 PRIVATE cxx_std_17)
@@ -68,3 +67,5 @@ enable_testing()
 add_test(test_17 test_stacktrace_17)
 add_test(test_20 test_stacktrace_20)
 add_test(test_23 test_stacktrace_23)
+
+endif()
