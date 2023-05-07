@@ -60,14 +60,14 @@ using stacktrace = std::pmr::stacktrace;
 
 #pragma GCC system_header
 
-#include <utility>
 #include <compare>
 #include <limits>
 #include <memory>
-#include <memory_resource>
 #include <new>
 #include <sstream>
 #include <string>
+#include <utility>
+
 
 #if __has_include(<backtrace.h>)
 #include <backtrace.h>
@@ -76,26 +76,39 @@ using stacktrace = std::pmr::stacktrace;
 struct backtrace_state;
 struct backtrace_simple_data;
 extern "C" {
-backtrace_state *
-backtrace_create_state(const char *, int,
-                                 void (*)(void *, const char *, int), void
-                                 *);
-int backtrace_simple(backtrace_state *, int,
-                               int (*)(void *, __UINTPTR_TYPE__),
-                               void (*)(void *, const char *, int), void *);
+backtrace_state *backtrace_create_state(const char *, int,
+                                        void (*)(void *, const char *, int),
+                                        void *);
+int backtrace_simple(backtrace_state *, int, int (*)(void *, __UINTPTR_TYPE__),
+                     void (*)(void *, const char *, int), void *);
 int backtrace_pcinfo(backtrace_state *, __UINTPTR_TYPE__,
-                               int (*)(void *, __UINTPTR_TYPE__, const char
-                               *,
-                                       int, const char *),
-                               void (*)(void *, const char *, int), void *);
-int backtrace_syminfo(backtrace_state *,
-                                __UINTPTR_TYPE__ addr,
-                                void (*)(void *, __UINTPTR_TYPE__, const char
-                                *,
-                                         __UINTPTR_TYPE__, __UINTPTR_TYPE__),
-                                void (*)(void *, const char *, int), void *);
+                     int (*)(void *, __UINTPTR_TYPE__, const char *, int,
+                             const char *),
+                     void (*)(void *, const char *, int), void *);
+int backtrace_syminfo(backtrace_state *, __UINTPTR_TYPE__ addr,
+                      void (*)(void *, __UINTPTR_TYPE__, const char *,
+                               __UINTPTR_TYPE__, __UINTPTR_TYPE__),
+                      void (*)(void *, const char *, int), void *);
 }
 
+#endif
+
+#if defined(_LIBCPP_VERSION) && __has_include(<__assert>)
+#    include <__assert>
+#    define _FBBE_ASSERT(pred) _LIBCPP_ASSERT(pred, "")
+#elif defined(__GLIBCXX__)
+#    define _FBBE_ASSERT(pred) __glibcxx_assert(pred)
+#else
+#    include <cassert>
+#    define _FBBE_ASSERT(pred) (assert((pred)))
+#endif
+
+#if defined(__GLIBCXX__) || defined(_WIN32) || defined(CYGWIN)
+  #define _FBBE_TRY __try 
+  #define _FBBE_CATCH(x) __catch(x)
+#else
+  #define _FBBE_TRY try
+  #define _FBBE_CATCH(x) catch(x)
 #endif
 
 
@@ -239,8 +252,7 @@ private:
       return __function != nullptr;
     };
     const auto __state = _S_init();
-    if (::backtrace_pcinfo(__state, _M_pc, +__cb, _S_err_handler,
-                                     &__data))
+    if (::backtrace_pcinfo(__state, _M_pc, +__cb, _S_err_handler, &__data))
       return true;
     if (__desc && __desc->empty()) {
       auto __cb2 = [](void *__data, uintptr_t, const char *__symname, uintptr_t,
@@ -248,8 +260,7 @@ private:
         if (__symname)
           *static_cast<_Data *>(__data)->_M_desc = _S_demangle(__symname);
       };
-      if (::backtrace_syminfo(__state, _M_pc, +__cb2, _S_err_handler,
-                                        &__data))
+      if (::backtrace_syminfo(__state, _M_pc, +__cb2, _S_err_handler, &__data))
         return true;
     }
     return false;
@@ -299,9 +310,8 @@ public:
     basic_stacktrace __ret(__alloc);
     if (auto __cb = __ret._M_prepare()) [[likely]] {
       auto __state = stacktrace_entry::_S_init();
-      if (backtrace_simple(__state, 1, __cb,
-                                     stacktrace_entry::_S_err_handler,
-                                     std::addressof(__ret)))
+      if (backtrace_simple(__state, 1, __cb, stacktrace_entry::_S_err_handler,
+                           std::addressof(__ret)))
         __ret._M_clear();
     }
     return __ret;
@@ -316,8 +326,8 @@ public:
     if (auto __cb = __ret._M_prepare()) [[likely]] {
       auto __state = stacktrace_entry::_S_init();
       if (backtrace_simple(__state, __skip + 1, __cb,
-                                     stacktrace_entry::_S_err_handler,
-                                     std::addressof(__ret)))
+                           stacktrace_entry::_S_err_handler,
+                           std::addressof(__ret)))
         __ret._M_clear();
     }
 
@@ -327,7 +337,7 @@ public:
   [[__gnu__::__noinline__]] static basic_stacktrace
   current(size_type __skip, size_type __max_depth,
           const allocator_type &__alloc = allocator_type()) noexcept {
-    __glibcxx_assert(__skip <= (size_type(-1) - __max_depth));
+    _FBBE_ASSERT(__skip <= (size_type(-1) - __max_depth));
 
     basic_stacktrace __ret(__alloc);
     if (__max_depth == 0) [[unlikely]]
@@ -337,8 +347,8 @@ public:
     if (auto __cb = __ret._M_prepare(__max_depth)) [[likely]] {
       auto __state = stacktrace_entry::_S_init();
       int __err = backtrace_simple(__state, __skip + 1, __cb,
-                                             stacktrace_entry::_S_err_handler,
-                                             std::addressof(__ret));
+                                   stacktrace_entry::_S_err_handler,
+                                   std::addressof(__ret));
       if (__err < 0)
         __ret._M_clear();
       else if (__ret.size() > __max_depth) {
@@ -495,7 +505,7 @@ public:
   }
 
   const_reference operator[](size_type __n) const noexcept {
-    __glibcxx_assert(__n < size());
+    _FBBE_ASSERT(__n < size());
     return begin()[__n];
   }
 
@@ -596,7 +606,7 @@ public:
     if constexpr (_AllocTraits::propagate_on_container_swap::value)
       std::swap(_M_alloc, __other._M_alloc);
     else if constexpr (!_AllocTraits::is_always_equal::value) {
-      __glibcxx_assert(_M_alloc == __other._M_alloc);
+      _FBBE_ASSERT(_M_alloc == __other._M_alloc);
     }
   }
 
@@ -675,10 +685,10 @@ private:
             return nullptr;
           _M_frames = static_cast<pointer>(__p);
         } else {
-          __try {
+          _FBBE_TRY {
             _M_frames = __alloc.allocate(__n);
           }
-          __catch(const std::bad_alloc &) { return nullptr; }
+          _FBBE_CATCH(const std::bad_alloc &) { return nullptr; }
         }
         _M_capacity = __n;
         return _M_frames;
@@ -690,8 +700,12 @@ private:
       if (_M_capacity) {
         if constexpr (std::is_same_v<allocator_type,
                                      std::allocator<value_type>>)
+#if defined(__cpp_sized_deallocation) && __cpp_sized_deallocation >= 201309L
           _FBBE_GNU_OPERATOR_DELETE(static_cast<void *>(_M_frames),
                                     _M_capacity * sizeof(value_type));
+#else
+          _FBBE_GNU_OPERATOR_DELETE(static_cast<void *>(_M_frames));                          
+#endif
         else
           __alloc.deallocate(_M_frames, _M_capacity);
         _M_frames = nullptr;
@@ -815,12 +829,17 @@ std::string to_string(const basic_stacktrace<_Allocator> &__st) {
   return std::move(__os).str();
 }
 
-namespace pmr {
+} // namespace fbbe
+
+#if __has_include(<memory_resource>)
+#include <memory_resource>
+
+namespace fbbe::pmr {
 using stacktrace =
     basic_stacktrace<std::pmr::polymorphic_allocator<stacktrace_entry>>;
-}
+} // namespace fbbe::pmr
 
-} // namespace fbbe
+#endif // __has_include(<memory_resource>)
 
 // [stacktrace.basic.hash], hash support
 
