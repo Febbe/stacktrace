@@ -51,21 +51,26 @@ endif()
 if (PROJECT_IS_TOP_LEVEL)
 
 # Compilation tests
+enable_testing()
+
 add_executable(test_stacktrace_17 test/main.cpp)
 target_compile_features(test_stacktrace_17 PRIVATE cxx_std_17)
 target_link_libraries(test_stacktrace_17 PRIVATE fbbe::stacktrace)
-
-add_executable(test_stacktrace_20 test/main.cpp)
-target_compile_features(test_stacktrace_20 PRIVATE cxx_std_20)
-target_link_libraries(test_stacktrace_20 PRIVATE fbbe::stacktrace)
-
-add_executable(test_stacktrace_23 test/main.cpp)
-target_compile_features(test_stacktrace_23 PRIVATE cxx_std_23)
-target_link_libraries(test_stacktrace_23 PRIVATE fbbe::stacktrace)
-
-enable_testing()
 add_test(test_17 test_stacktrace_17)
-add_test(test_20 test_stacktrace_20)
-add_test(test_23 test_stacktrace_23)
 
+list(FIND CMAKE_CXX_COMPILE_FEATURES cxx_std_20 _cxx_std_20_index)
+if(NOT _cxx_std_20_index EQUAL -1)
+  add_executable(test_stacktrace_20 test/main.cpp)
+  target_compile_features(test_stacktrace_20 PRIVATE cxx_std_20)
+  target_link_libraries(test_stacktrace_20 PRIVATE fbbe::stacktrace)
+  add_test(test_20 test_stacktrace_20)
+endif()
+
+list(FIND CMAKE_CXX_COMPILE_FEATURES cxx_std_23 _cxx_std_23_index)
+if(NOT _cxx_std_23_index EQUAL -1)
+  add_executable(test_stacktrace_23 test/main.cpp)
+  target_compile_features(test_stacktrace_23 PRIVATE cxx_std_23)
+  target_link_libraries(test_stacktrace_23 PRIVATE fbbe::stacktrace)
+  add_test(test_23 test_stacktrace_23)
+endif()
 endif()
