@@ -74,6 +74,8 @@ if(NOT Backtrace_LIBRARY AND NOT _Backtrace_SYM_FOUND)
     CONFIGURE_COMMAND ../libbacktrace/configure --prefix=${CMAKE_CURRENT_BINARY_DIR}/libbacktrace
     BUILD_COMMAND make 
     INSTALL_COMMAND make install
+    BUILD_BYPRODUCTS "${CMAKE_CURRENT_BINARY_DIR}/libbacktrace/lib/libbacktrace.a"
+    # INSTALL_BYPRODUCTS "${CMAKE_CURRENT_BINARY_DIR}/libbacktrace/lib/libbacktrace.a"
   )
   ExternalProject_Get_Property(libbacktrace install_dir)
   set(_Backtrace_HEADER_TRY "${install_dir}/include/backtrace.h")  
