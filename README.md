@@ -20,6 +20,8 @@ target_link_libraries(my_target PRIVATE fbbe::stacktrace)
 
 # Compatibility
 
+# To the c++23 stacktrace library
+
 Beside the spaceship operator (three way comparison) the library is fully compatible to 
 std::stacktrace from the c++23 <stacktrace> header. 
 
@@ -27,3 +29,17 @@ Just replace std::stacktrace with fbbe::stacktrace.
 
 As soon you switch to c++23 with an implemented stacktrace library, fbbe::stacktrace falls back to std::stacktrace.
 This will make it easy, to replace it later.
+
+## Compilers
+
+|  Compiler  | Version | Status  |
+|------------|---------|---------|
+| GCC        | 9       | FAIL    |
+| GCC        | 10      | OK      |
+| Clang      | 11      | UNKNOWN |
+| Clang      | 12      | OK      |
+| MSVC       | 19.28   | UNKNOWN |
+| MSVC       | 19.29   | OK      |
+| MSVC       | 19.30   | OK      |
+| AppleClang | 13      | UNKNOWN |
+| AppleClang | 14      | OK      |
