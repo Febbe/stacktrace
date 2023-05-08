@@ -64,6 +64,14 @@ if((Backtrace_LIBRARY OR _Backtrace_SYM_FOUND) AND NOT Backtrace_INCLUDE_DIR )
 endif()
 if(NOT Backtrace_LIBRARY AND NOT _Backtrace_SYM_FOUND)
   message("BACKTRACE_LIBRARY not found, downloading libbacktrace")
+
+  if (MINGW OR MSYS)
+    # cmake runs cmd here, but we need bash from msys2
+    set (_configure_command "bash -lic \"../libbacktrace/configure --prefix=${CMAKE_CURRENT_BINARY_DIR}/libbacktrace\"")
+  else()
+    set (_configure_command "../libbacktrace/configure --prefix=${CMAKE_CURRENT_BINARY_DIR}/libbacktrace")
+  endif()
+
   include(ExternalProject)
   ExternalProject_Add(libbacktrace
     PREFIX "${CMAKE_CURRENT_BINARY_DIR}/libbacktrace"
@@ -71,7 +79,7 @@ if(NOT Backtrace_LIBRARY AND NOT _Backtrace_SYM_FOUND)
     GIT_TAG master
     GIT_SHALLOW TRUE
     GIT_PROGRESS TRUE
-    CONFIGURE_COMMAND ../libbacktrace/configure --prefix=${CMAKE_CURRENT_BINARY_DIR}/libbacktrace
+    CONFIGURE_COMMAND ${_configure_command}
     BUILD_COMMAND make 
     INSTALL_COMMAND make install
     BUILD_BYPRODUCTS "${CMAKE_CURRENT_BINARY_DIR}/libbacktrace/lib/libbacktrace.a"
