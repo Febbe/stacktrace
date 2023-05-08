@@ -67,9 +67,9 @@ if(NOT Backtrace_LIBRARY AND NOT _Backtrace_SYM_FOUND)
 
   if (MINGW OR MSYS)
     # cmake runs cmd here, but we need bash from msys2
-    set (_configure_command "bash -lic \"../libbacktrace/configure --prefix=${CMAKE_CURRENT_BINARY_DIR}/libbacktrace\"")
+    set (_configure_command bash -lic "../libbacktrace/configure --prefix=${CMAKE_CURRENT_BINARY_DIR}/libbacktrace")
   else()
-    set (_configure_command "../libbacktrace/configure --prefix=${CMAKE_CURRENT_BINARY_DIR}/libbacktrace")
+    set (_configure_command ../libbacktrace/configure --prefix=${CMAKE_CURRENT_BINARY_DIR}/libbacktrace)
   endif()
 
   include(ExternalProject)
