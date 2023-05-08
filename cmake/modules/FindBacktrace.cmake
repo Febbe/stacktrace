@@ -90,7 +90,7 @@ set(Backtrace_HEADER "${_Backtrace_HEADER_TRY}" CACHE STRING "Header providing l
 target_include_directories(backtrace INTERFACE ${Backtrace_INCLUDE_DIR})
 target_link_libraries(backtrace INTERFACE ${Backtrace_LIBRARIES})
 target_compile_options(stacktrace INTERFACE -g)
-target_link_options(stacktrace INTERFACE -rdynamic)
+target_link_options(stacktrace INTERFACE $<$<NOT:$<PLATFORM_ID:Windows>>:-rdynamic>)
 add_library(Backtrace::backtrace ALIAS backtrace)
 set(Backtrace_TARGET Backtrace::backtrace)
 
