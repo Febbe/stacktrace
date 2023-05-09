@@ -31,20 +31,22 @@
 #ifndef _FBBE_GNU_STACKTRACE
 #define _FBBE_GNU_STACKTRACE 1
 
-#if not defined(_FBBE_GNU_STACKTRACE)
-#if __has_include(<stacktrace>)
-#include <stacktrace>
-#if defined(__cpp_lib_stacktrace) && __cpp_lib_stacktrace >= 201907L
-#define _FBBE_GNU_STACKTRACE 0
-#else
-#define _FBBE_GNU_STACKTRACE 1
-#endif
-#endif
-#else
-#define _FBBE_GNU_STACKTRACE 1
+#if not defined(_FBBE_USE_STL)
+# if __has_include(<stacktrace>)
+#  include <stacktrace>
+#  if defined(__cpp_lib_stacktrace) && __cpp_lib_stacktrace >= 201907L
+#   define _FBBE_USE_STL 0
+#  else
+#   define _FBBE_USE_STL 1
+#  endif
+# else
+#  define _FBBE_USE_STL 1
+# endif
 #endif
 
-#if _FBBE_GNU_STACKTRACE == 0
+#if _FBBE_USE_STL == 0
+
+#pragma message("using std::stacktrace")
 
 namespace fbbe {
 using stacktrace_entry = ::std::stacktrace_entry;
@@ -56,7 +58,9 @@ using stacktrace = std::pmr::stacktrace;
 }
 } // namespace fbbe
 
-#endif
+#else
+
+#pragma message("using fbbe::stacktrace")
 
 #pragma GCC system_header
 
@@ -866,4 +870,5 @@ struct std::hash<fbbe::basic_stacktrace<_Allocator>> {
     return __val;
   }
 };
+#endif
 #endif
