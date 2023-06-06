@@ -105,7 +105,7 @@ int backtrace_syminfo(backtrace_state *, __UINTPTR_TYPE__ addr,
 #    define _FBBE_ASSERT(pred) (assert((pred)))
 #endif
 
-#if defined(__GLIBCXX__) || defined(_WIN32) || defined(CYGWIN)
+#if defined(__GLIBCXX__) || ((defined(__MINGW32__) || defined(__CYGWIN__)) && !defined(__clang__))
   #define _FBBE_TRY __try 
   #define _FBBE_CATCH(x) __catch(x)
 #else
