@@ -16,7 +16,7 @@ add_library(fbbe::stacktrace ALIAS stacktrace)
 if (NOT DEFINED FBBE_USE_IMPL)
   if(MSVC) # MSVC or clang-cl using MSVC runtime/STL
     set(FBBE_USE_IMPL "msvc")
-  elseif(NOT WIN32) # gcc or clang both support backtrace, which utilizes the itanium C++ unwind API
+  elseif(NOT (WIN32 OR MINGW)) # gcc or clang both support backtrace, which utilizes the itanium C++ unwind API
     find_package(Backtrace MODULE REQUIRED)
     set(FBBE_USE_IMPL "itanium")
   else()
