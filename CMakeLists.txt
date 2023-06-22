@@ -49,10 +49,15 @@ elseif(${FBBE_USE_IMPL} STREQUAL "itanium") # gcc or clang support the itanium C
 elseif(${FBBE_USE_IMPL} STREQUAL "windows") 
   add_library(stacktrace_win_impl STATIC windows/src/msvc_stacktrace.cpp)
   include(CheckCXXCompilerFlag)
-  check_cxx_compiler_flag(gcodeview SUPPORT_WINDOWS_DEBUG_INFO)
+  check_cxx_compiler_flag(-gcodeview SUPPORT_WINDOWS_DEBUG_INFO)
   if(SUPPORT_WINDOWS_DEBUG_INFO)
     message(STATUS "Compiler supports windows debug info")
     target_compile_options(stacktrace_win_impl PUBLIC -g -gcodeview)
+    # 
+    check_cxx_compiler_flag(-gcodeview-command-line SUPPORT_GCODEVIEW_COMMAND_LINE)
+    if(SUPPORT_GCODEVIEW_COMMAND_LINE)
+      target_compile_options(stacktrace_win_impl PUBLIC -gcodeview-command-line)
+    endif()
   else()
     message(WARNING "Compiler does not support windows debug info (-gcodeview), ask compiler provider to add the support.\n"
                     "Stacktrace will not be able to resolve source code symbols (function names, file names, line numbers).")
