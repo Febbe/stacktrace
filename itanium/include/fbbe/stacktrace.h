@@ -28,6 +28,7 @@
 // <http://www.gnu.org/licenses/>.
 
 #pragma once
+
 #ifndef _FBBE_GNU_STACKTRACE
 #define _FBBE_GNU_STACKTRACE 1
 
@@ -60,12 +61,25 @@ using stacktrace = std::pmr::stacktrace;
 
 #pragma GCC system_header
 
+#include <charconv>
+#include <cstring>
+#include <cunistd>
+#include <dlfcn.h>
 #include <limits>
+#include <link.h>
+#include <linux/limits.h>
 #include <memory>
 #include <new>
 #include <sstream>
 #include <string>
 #include <utility>
+
+#if __ELF_NATIVE_CLASS == 32
+#define WORD_WIDTH 8
+#else
+/* We assume 64bits.  */
+#define WORD_WIDTH 16
+#endif
 
 #if __has_include(<compare>)
 #include <compare>
@@ -96,24 +110,23 @@ int backtrace_syminfo(backtrace_state *, __UINTPTR_TYPE__ addr,
 #endif
 
 #if defined(_LIBCPP_VERSION) && __has_include(<__assert>)
-#    include <__assert>
-#    define _FBBE_ASSERT(pred) _LIBCPP_ASSERT(pred, "")
+#include <__assert>
+#define _FBBE_ASSERT(pred) _LIBCPP_ASSERT(pred, "")
 #elif defined(__GLIBCXX__)
-#    define _FBBE_ASSERT(pred) __glibcxx_assert(pred)
+#define _FBBE_ASSERT(pred) __glibcxx_assert(pred)
 #else
-#    include <cassert>
-#    define _FBBE_ASSERT(pred) (assert((pred)))
+#include <cassert>
+#define _FBBE_ASSERT(pred) (assert((pred)))
 #endif
 
-#if defined(__GLIBCXX__) || ((defined(__MINGW32__) || defined(__CYGWIN__)) && !defined(__clang__))
-  #define _FBBE_TRY __try 
-  #define _FBBE_CATCH(x) __catch(x)
+#if defined(__GLIBCXX__) ||                                                    \
+    ((defined(__MINGW32__) || defined(__CYGWIN__)) && !defined(__clang__))
+#define _FBBE_TRY __try
+#define _FBBE_CATCH(x) __catch(x)
 #else
-  #define _FBBE_TRY try
-  #define _FBBE_CATCH(x) catch(x)
+#define _FBBE_TRY try
+#define _FBBE_CATCH(x) catch (x)
 #endif
-
-
 
 namespace __cxxabiv1 {
 extern "C" char *__cxa_demangle(const char *__mangled_name,
@@ -224,12 +237,33 @@ private:
   static void _S_err_handler(void *, const char *, int) {}
 
   static backtrace_state *_S_init() {
-    static backtrace_state *__state =
-        backtrace_create_state(nullptr, 1, _S_err_handler, nullptr);
+    static backtrace_state *__state = []() {
+      auto getpath = []() -> std::string {
+        char buf[PATH_MAX + 1];
+        if (readlink("/proc/self/exe", buf, sizeof(buf) - 1) == -1) {
+          return "";
+        }
+        std::string str(buf);
+        return str.substr(0, str.rfind('/'));
+      };
+
+      auto exec_filename = getpath();
+      return backtrace_create_state(exec_filename.c_str(), 1, _S_err_handler,
+                                    nullptr);
+    }();
     return __state;
   }
 
   friend std::ostream &operator<<(std::ostream &, const stacktrace_entry &);
+
+  std::string _symbol(uintptr_t const pc) const {
+    Dl_info info;
+    int status;
+    link_map *map;
+    status = dladdr1((void const *)(pc), &info, reinterpret_cast<void **>(&map),
+                     RTLD_DL_LINKMAP);
+    return std::string(info.dli_fname ?: "");
+  }
 
   bool _M_get_info(std::string *__desc, std::string *__file,
                    int *__line) const {
@@ -687,9 +721,7 @@ private:
             return nullptr;
           _M_frames = static_cast<pointer>(__p);
         } else {
-          _FBBE_TRY {
-            _M_frames = __alloc.allocate(__n);
-          }
+          _FBBE_TRY { _M_frames = __alloc.allocate(__n); }
           _FBBE_CATCH(const std::bad_alloc &) { return nullptr; }
         }
         _M_capacity = __n;
@@ -706,7 +738,7 @@ private:
           _FBBE_GNU_OPERATOR_DELETE(static_cast<void *>(_M_frames),
                                     _M_capacity * sizeof(value_type));
 #else
-          _FBBE_GNU_OPERATOR_DELETE(static_cast<void *>(_M_frames));                          
+          _FBBE_GNU_OPERATOR_DELETE(static_cast<void *>(_M_frames));
 #endif
         else
           __alloc.deallocate(_M_frames, _M_capacity);
@@ -803,7 +835,8 @@ inline std::ostream &operator<<(std::ostream &__os,
   int __line;
   if (__f._M_get_info(&__desc, &__file, &__line)) {
     __os.width(4);
-    __os << __desc << " at " << __file << ':' << __line;
+    __os << __f._symbol(__f._M_pc) << "(" << __desc << ") at " << __file << ':'
+         << __line;
   }
   return __os;
 }
